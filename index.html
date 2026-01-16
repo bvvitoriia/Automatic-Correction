@@ -1,0 +1,2957 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Automatic Correction - App Prototype</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Adicionando biblioteca Tesseract.js para OCR -->
+    <script src="https://unpkg.com/tesseract.js@v4.0.2/dist/tesseract.min.js"></script>
+    <!-- Adicionando Google Identity Services para login com Google -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <style>
+        /* Todos os estilos CSS anteriores mantidos */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Arial, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        /* Container do celular */
+        .phone-container {
+            position: relative;
+            width: 340px;
+            height: 680px;
+            background: #111;
+            border-radius: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), 
+                        0 0 0 4px #222, 
+                        0 0 0 8px #444;
+            overflow: hidden;
+            padding: 15px;
+            z-index: 10;
+        }
+        
+        /* Tela do celular */
+        .phone-screen {
+            width: 100%;
+            height: 100%;
+            background: white;
+            border-radius: 30px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        /* Botões do celular */
+        .phone-button {
+            position: absolute;
+            background: #333;
+        }
+        
+        .power-button {
+            width: 4px;
+            height: 60px;
+            right: -4px;
+            top: 120px;
+            border-radius: 0 2px 2px 0;
+        }
+        
+        .volume-buttons {
+            width: 4px;
+            height: 100px;
+            right: -4px;
+            top: 200px;
+            border-radius: 0 2px 2px 0;
+        }
+        
+        .volume-buttons::before {
+            content: '';
+            position: absolute;
+            width: 4px;
+            height: 40px;
+            top: -50px;
+            background: #333;
+            border-radius: 0 2px 2px 0;
+        }
+        
+        .silent-button {
+            width: 4px;
+            height: 25px;
+            left: -4px;
+            top: 120px;
+            border-radius: 2px 0 0 2px;
+        }
+        
+        /* Notch para câmera */
+        .notch {
+            position: absolute;
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 140px;
+            height: 30px;  
+            background: #111;
+            border-radius: 0 0 20px 20px;
+            z-index: 10;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .notch::before {
+            content: '';
+            width: 60px;
+            height: 60px;
+            background: #222;
+            border-radius: 50%;
+            position: absolute;
+            top: -25px;
+        }
+        
+        .notch::after {
+            content: '';
+            width: 12px;
+            height: 12px;
+            background: #0a1e3a;
+            border-radius: 50%;
+            position: absolute;
+            right: 25px;
+        }
+        
+        /* Conteúdo dentro do celular */
+        .container {
+            width: 100%;
+            height: 100%;
+            background-color: white;
+            border-radius: 20px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .screen {
+            padding: 50px 20px 70px;
+            display: none;
+            height: 100%;
+            overflow-y: auto;
+            position: relative;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+        
+        .screen.active {
+            display: block;
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .logo-container {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .logo-placeholder {
+            width: 130px;
+            height: 130px;
+            background: linear-gradient(135deg, #11c2cbf8, #9df5f5);
+            border-radius: 25px;
+            margin: 0 auto 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 40px;
+            font-weight: bold;
+            box-shadow: 0 10px 20px rgba(17, 194, 203, 0.3);
+            overflow: hidden;
+        }
+        
+        .logo-placeholder img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #0397a7;
+            font-size: 26px;
+            margin-bottom: 10px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+        }
+        
+        h2 {
+            text-align: center;
+            color: #0397a7;
+            font-size: 22px;
+            margin-bottom: 20px;
+            font-weight: 700;
+        }
+        
+        h3 {
+            color: #0397a7;
+            font-size: 18px;
+            margin-bottom: 15px;
+            font-weight: 700;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #01646b;
+            font-size: 16px;
+            margin-bottom: 30px;
+            font-weight: 500;
+            line-height: 1.5;
+        }
+        
+        .success-message {
+            text-align: center;
+            color: #0397a7;
+            font-size: 22px;
+            font-weight: 700;
+            margin: 30px 0;
+            padding: 25px;
+            background-color: rgba(3, 151, 167, 0.1);
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        }
+        
+        .checkmark {
+            font-size: 70px;
+            color: #0397a7;
+            margin-bottom: 20px;
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 16px;
+            border: 2px solid #ddd;
+            border-radius: 12px;
+            font-size: 16px;
+            transition: all 0.3s;
+            background-color: #f9f9f9;
+        }
+        
+        .form-group input:focus {
+            border-color: #11b8cbf4;
+            outline: none;
+            background-color: white;
+            box-shadow: 0 0 0 3px rgba(17, 184, 203, 0.2);
+        }
+        
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(to right, #11c2cbf8, #9df5f5);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 15px;
+            box-shadow: 0 5px 15px rgba(17, 194, 203, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(17, 194, 203, 0.4);
+        }
+        
+        .btn:active {
+            transform: translateY(1px);
+        }
+        
+        .btn::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 5px;
+            height: 5px;
+            background: rgba(255, 255, 255, 0.5);
+            opacity: 0;
+            border-radius: 100%;
+            transform: scale(1, 1) translate(-50%);
+            transform-origin: 50% 50%;
+        }
+        
+        .btn:focus:not(:active)::after {
+            animation: ripple 1s ease-out;
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(to right, #f0f0f0, #e0e0e0);
+            color: #333;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .btn-secondary:hover {
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+        }
+        
+        .link {
+            text-align: center;
+            display: block;
+            color: #25d5fcec;
+            text-decoration: none;
+            margin-bottom: 20px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        
+        .link:hover {
+            text-decoration: underline;
+            transform: translateY(-1px);
+        }
+        
+        .divider {
+            text-align: center;
+            position: relative;
+            margin: 25px 0;
+            color: #999;
+        }
+        
+        .divider::before {
+            content: "";
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background-color: #ddd;
+            z-index: 1;
+        }
+        
+        .divider span {
+            background-color: white;
+            position: relative;
+            z-index: 2;
+            padding: 0 15px;
+        }
+        
+        .social-login {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .social-btn {
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            width: 55px;
+            height: 55px;
+            background: linear-gradient(to right, #f5f5f5, #e8e8e8);
+            border-radius: 50%;
+            font-weight: bold;
+            font-size: 22px;
+            color: #444;
+            text-decoration: none;
+            margin: 0 5px;
+            transition: all 0.3s;
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .social-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.15);
+        }
+        
+        .alternative-login {
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        .alternative-link {
+            color: #25dffcf6;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        
+        .alternative-link:hover {
+            text-decoration: underline;
+            transform: translateY(-1px);
+        }
+        
+        .next-btn {
+            position: absolute;
+            bottom: 25px;
+            right: 25px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(to right, #11cbc8f6, #25d1fcf4);
+            color: white;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.3s;
+            z-index: 20;
+        }
+        
+        .next-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 12px 25px rgba(0, 0, 0, 0.4);
+        }
+        
+        /* Barra de navegação inferior (como botões de navegação do celular) */
+        .phone-nav {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 60px;
+            background: #f8f8f8;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            border-top: 1px solid #eee;
+            z-index: 5;
+        }
+        
+        .nav-btn {
+            width: 26px;
+            height: 26px;
+            background: #ddd;
+            border-radius: 50%;
+            transition: all 0.3s;
+        }
+        
+        .nav-btn:hover {
+            background: #11c2cbf8;
+            transform: scale(1.1);
+        }
+        
+        .home-btn {
+            width: 45px;
+            height: 45px;
+            background: #eee;
+            border-radius: 50%;
+            border: 1px solid #ddd;
+            transition: all 0.3s;
+        }
+        
+        .home-btn:hover {
+            background: #11c2cbf8;
+            border-color: #11c2cbf8;
+            transform: scale(1.1);
+        }
+        
+        /* Estilos para a tela principal */
+        .main-menu {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 18px;
+            margin-top: 20px;
+        }
+        
+        .menu-item {
+            background: linear-gradient(135deg, #11c2cbf8, #9df5f5);
+            border-radius: 16px;
+            padding: 20px 15px;
+            text-align: center;
+            color: white;
+            font-weight: 600;
+            font-size: 14px;
+            min-height: 110px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .menu-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(255,255,255,0.2), rgba(255,255,255,0));
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .menu-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 20px rgba(0, 0, 0, 0.15);
+        }
+        
+        .menu-item:hover::before {
+            opacity: 1;
+        }
+        
+        .menu-icon {
+            font-size: 28px;
+            margin-bottom: 12px;
+        }
+        
+        .menu-title {
+            font-size: 14px;
+            font-weight: 700;
+        }
+        
+        .menu-subtitle {
+            font-size: 11px;
+            font-weight: 500;
+            margin-top: 5px;
+            opacity: 0.9;
+        }
+        
+        .header-title {
+            text-align: center;
+            color: #0397a7;
+            font-size: 22px;
+            margin-bottom: 5px;
+            font-weight: 800;
+        }
+        
+        .header-subtitle {
+            text-align: center;
+            color: #01646b;
+            font-size: 14px;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+        
+        /* Estilos para a tela de correção de gabarito */
+        .correction-container {
+            padding: 10px;
+        }
+        
+        .upload-area {
+            border: 2px dashed #11c2cbf8;
+            border-radius: 15px;
+            padding: 30px 20px;
+            text-align: center;
+            margin-bottom: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            background-color: rgba(17, 194, 203, 0.05);
+        }
+        
+        .upload-area:hover {
+            background-color: rgba(17, 194, 203, 0.1);
+            transform: translateY(-3px);
+        }
+        
+        .upload-icon {
+            font-size: 50px;
+            color: #11c2cbf8;
+            margin-bottom: 15px;
+        }
+        
+        .correction-result {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: #f9f9f9;
+            border-radius: 15px;
+            display: none;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            animation: fadeIn 0.5s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .result-header {
+            text-align: center;
+            color: #0397a7;
+            margin-bottom: 20px;
+            font-weight: 700;
+            font-size: 20px;
+        }
+        
+        .result-stats {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 20px;
+        }
+        
+        .stat-box {
+            text-align: center;
+            padding: 15px;
+            border-radius: 12px;
+            width: 45%;
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.05);
+        }
+        
+        .correct-answers {
+            background: linear-gradient(135deg, rgba(76, 175, 80, 0.2), rgba(76, 175, 80, 0.1));
+            color: #2e7d32;
+            border: 1px solid rgba(76, 175, 80, 0.3);
+        }
+        
+        .wrong-answers {
+            background: linear-gradient(135deg, rgba(244, 67, 54, 0.2), rgba(244, 67, 54, 0.1));
+            color: #c62828;
+            border: 1px solid rgba(244, 67, 54, 0.3);
+        }
+        
+        .stat-number {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+        
+        .back-btn {
+            display: block;
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(to right, #f0f0f0, #e0e0e0);
+            color: #333;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 20px;
+            text-align: center;
+            transition: all 0.3s;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .back-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+        }
+        
+        .question-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+            margin: 20px 0;
+        }
+        
+        .question-item {
+            padding: 10px 5px;
+            text-align: center;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        
+        .question-item:hover {
+            transform: scale(1.05);
+        }
+        
+        .question-correct {
+            background: linear-gradient(135deg, #4CAF50, #66BB6A);
+            color: white;
+            box-shadow: 0 3px 8px rgba(76, 175, 80, 0.3);
+        }
+        
+        .question-wrong {
+            background: linear-gradient(135deg, #F44336, #EF5350);
+            color: white;
+            box-shadow: 0 3px 8px rgba(244, 67, 54, 0.3);
+        }
+        
+        .question-empty {
+            background: linear-gradient(135deg, #9E9E9E, #BDBDBD);
+            color: white;
+            box-shadow: 0 3px 8px rgba(158, 158, 158, 0.3);
+        }
+        
+        .student-info {
+            background: linear-gradient(135deg, #E3F2FD, #BBDEFB);
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            border: 1px solid #BBDEFB;
+        }
+        
+        .progress-bar {
+            height: 8px;
+            background-color: #e0e0e0;
+            border-radius: 4px;
+            margin: 15px 0;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(to right, #4CAF50, #66BB6A);
+            border-radius: 4px;
+            transition: width 1s ease;
+        }
+        
+        /* Indicador de tela atual */
+        .screen-indicator {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        
+        .indicator-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #ddd;
+            margin: 0 5px;
+            transition: all 0.3s;
+        }
+        
+        .indicator-dot.active {
+            background-color: #11c2cbf8;
+            transform: scale(1.2);
+        }
+        
+        /* Estilos para a tela de gráficos */
+        .charts-container {
+            padding: 10px;
+        }
+        
+        .chart-card {
+            background-color: white;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            border: 1px solid #eee;
+        }
+        
+        .chart-title {
+            text-align: center;
+            color: #0397a7;
+            margin-bottom: 15px;
+            font-weight: 700;
+            font-size: 16px;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 200px;
+            width: 100%;
+        }
+        
+        .performance-summary {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .summary-card {
+            background: linear-gradient(135deg, #E3F2FD, #BBDEFB);
+            border-radius: 12px;
+            padding: 15px;
+            text-align: center;
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.05);
+        }
+        
+        .summary-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #0397a7;
+            margin-bottom: 5px;
+        }
+        
+        .summary-label {
+            font-size: 14px;
+            color: #01646b;
+            font-weight: 500;
+        }
+        
+        /* Novos estilos para as telas de escaneamento e correção */
+        .scan-container {
+            padding: 10px;
+            text-align: center;
+        }
+        
+        .camera-preview {
+            width: 100%;
+            height: 300px;
+            background-color: #333;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 18px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .camera-frame {
+            width: 80%;
+            height: 70%;
+            border: 2px solid #11c2cbf8;
+            border-radius: 10px;
+            position: absolute;
+            box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.5);
+        }
+        
+        .scanning-animation {
+            position: absolute;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(to right, transparent, #11c2cbf8, transparent);
+            animation: scanning 2s infinite linear;
+        }
+        
+        @keyframes scanning {
+            0% { top: 0; }
+            100% { top: 100%; }
+        }
+        
+        .capture-btn {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background: linear-gradient(to right, #11c2cbf8, #9df5f5);
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(17, 194, 203, 0.3);
+            transition: all 0.3s;
+            margin: 20px auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .capture-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 8px 20px rgba(17, 194, 203, 0.4);
+        }
+        
+        .scanned-image {
+            width: 100%;
+            max-height: 300px;
+            object-fit: contain;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .scan-result {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: #f9f9f9;
+            border-radius: 15px;
+            display: none;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            animation: fadeIn 0.5s ease;
+        }
+        
+        .answer-sheet {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f5f5f5;
+            border-radius: 12px;
+            border: 1px solid #ddd;
+        }
+        
+        .answer-row {
+            display: flex;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+        
+        .question-number {
+            width: 30px;
+            font-weight: 600;
+            color: #0397a7;
+        }
+        
+        .answer-options {
+            display: flex;
+            flex: 1;
+            justify-content: space-between;
+        }
+        
+        .answer-option {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #e0e0e0;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+        
+        .answer-option.selected {
+            background-color: #11c2cbf8;
+            color: white;
+            transform: scale(1.1);
+        }
+        
+        .answer-option.correct {
+            background-color: #4CAF50;
+            color: white;
+        }
+        
+        .answer-option.wrong {
+            background-color: #F44336;
+            color: white;
+        }
+        
+        .correction-controls {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+        
+        .correction-controls .btn {
+            width: 48%;
+        }
+        
+        /* Estilos para a tela de dicas personalizadas */
+        .tips-container {
+            padding: 10px;
+        }
+        
+        .tip-card {
+            background-color: white;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            border-left: 4px solid #11c2cbf8;
+        }
+        
+        .tip-title {
+            color: #0397a7;
+            font-weight: 700;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .tip-icon {
+            margin-right: 10px;
+            font-size: 18px;
+        }
+        
+        .tip-content {
+            color: #333;
+            line-height: 1.5;
+        }
+        
+        .tip-stats {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+            font-size: 14px;
+            color: #666;
+        }
+        
+        /* Estilos para a tela de adicionar gabarito oficial */
+        .official-answer-container {
+            padding: 10px;
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        /* Modal para visualização de imagem escaneada */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-content {
+            max-width: 90%;
+            max-height: 80%;
+            border-radius: 10px;
+        }
+        
+        .close-modal {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            color: white;
+            font-size: 40px;
+            cursor: pointer;
+        }
+        
+        /* Estilos para processamento de OCR */
+        .ocr-processing {
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .ocr-progress {
+            width: 100%;
+            height: 20px;
+            background-color: #f0f0f0;
+            border-radius: 10px;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+        
+        .ocr-progress-bar {
+            height: 100%;
+            background: linear-gradient(to right, #11c2cbf8, #9df5f5);
+            width: 0%;
+            transition: width 0.3s;
+        }
+        
+        .ocr-status {
+            color: #0397a7;
+            margin: 10px 0;
+            font-weight: 600;
+        }
+        
+        /* Botão de login com Google */
+        .gsi-material-button {
+            display: block;
+            width: 100%;
+            margin: 10px 0;
+        }
+        
+        /* Animações */
+        @keyframes ripple {
+            0% {
+                transform: scale(0, 0);
+                opacity: 1;
+            }
+            20% {
+                transform: scale(25, 25);
+                opacity: 1;
+            }
+            100% {
+                opacity: 0;
+                transform: scale(40, 40);
+            }
+        }
+        
+        /* Efeito de brilho para elementos interativos */
+        .glow {
+            animation: glow 2s infinite;
+        }
+        
+        @keyframes glow {
+            0% { box-shadow: 0 0 5px rgba(17, 194, 203, 0.5); }
+            50% { box-shadow: 0 0 20px rgba(17, 194, 203, 0.8); }
+            100% { box-shadow: 0 0 5px rgba(17, 194, 203, 0.5); }
+        }
+        
+        /* Responsividade */
+        @media (max-width: 400px) {
+            .phone-container {
+                width: 320px;
+                height: 650px;
+            }
+            
+            .main-menu {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Modal para visualização de imagem -->
+    <div class="modal" id="imageModal">
+        <span class="close-modal" id="closeModal">&times;</span>
+        <img class="modal-content" id="modalImage">
+    </div>
+
+    <div class="phone-container">
+        <div class="notch"></div>
+        <div class="phone-button power-button"></div>
+        <div class="phone-button volume-buttons"></div>
+        <div class="phone-button silent-button"></div>
+        
+        <div class="phone-screen">
+            <div class="container">
+                <!-- Tela 1 - Boas-vindas -->
+                <div class="screen active" id="screen1">
+                    <div class="logo-container">
+                        <div class="logo-placeholder"><img src="accc.jpg" alt="Automatic Correction Logo"></div>
+                    </div>
+                    <h1>AUTOMATIC CORRECTION</h1>
+                    <p class="subtitle">AUTOMATIZE A CORREÇÃO, OTIMIZE SEU TEMPO!</p>
+                    <div class="screen-indicator">
+                        <div class="indicator-dot active"></div>
+                        <div class="indicator-dot"></div>
+                        <div class="indicator-dot"></div>
+                        <div class="indicator-dot"></div>
+                        <div class="indicator-dot"></div>
+                        <div class="indicator-dot"></div>
+                        <div class="indicator-dot"></div>
+                    </div>
+                </div>
+                
+                <!-- Tela 2 - Cadastro/Login -->
+                <div class="screen" id="screen2">
+                    <div class="logo-container">
+                        <div class="logo-placeholder"><img src="accc.jpg" alt="Automatic Correction Logo"></div>
+                    </div>
+                    <h1>AUTOMATIC CORRECTION</h1>
+                    <p class="subtitle">AUTOMATIZE A CORREÇÃO, OTIMIZE SEU TEMPO!</p>
+                    
+                    <div class="form-group">
+                        <label for="email">E-mail</label>
+                        <input type="email" id="email" placeholder="Seu endereço de e-mail">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="password">Senha</label>
+                        <input type="password" id="password" placeholder="Sua senha">
+                    </div>
+                    
+                    <button class="btn" id="registerBtn">Cadastrar-se</button>
+                    
+                    <a href="#" class="link">Esqueceu a senha?</a>
+                    
+                    <div class="divider">
+                        <span>OU</span>
+                    </div>
+                    
+                    <!-- Botão de login com Google -->
+                    <div id="googleLoginContainer" class="social-login">
+                        <div id="g_id_onload"
+                            data-client_id="YOUR_GOOGLE_CLIENT_ID"
+                            data-context="signin"
+                            data-ux_mode="popup"
+                            data-login_uri="http://localhost"
+                            data-auto_prompt="false">
+                        </div>
+                        <div class="g_id_signin"
+                            data-type="standard"
+                            data-shape="pill"
+                            data-theme="outline"
+                            data-text="signin_with"
+                            data-size="large"
+                            data-logo_alignment="left"
+                            data-width="300">
+                        </div>
+                    </div>
+                    
+                    <div class="alternative-login">
+                        <a href="#" class="alternative-link" id="skipLogin">Continuar sem login</a>
+                    </div>
+                    
+                    <div class="screen-indicator">
+                        <div class="indicator-dot"></div>
+                        <div class="indicator-dot active"></div>
+                        <div class="indicator-dot"></div>
+                        <div class="indicator-dot"></div>
+                        <div class="indicator-dot"></div>
+                        <div class="indicator-dot"></div>
+                        <div class="indicator-dot"></div>
+                    </div>
+                </div>
+                
+                <!-- Tela 3 - Cadastro realizado com sucesso -->
+                <div class="screen" id="screen3">
+                    <div class="logo-container">
+                        <div class="logo-placeholder"><img src="accc.jpg" alt="Automatic Correction Logo"></div>
+                    </div>
+                    <div class="success-message">
+                        <div class="checkmark">✓</div>
+                        <p id="successMessage">Cadastro realizado<br>com sucesso!</p>
+                    </div>
+                    <button class="btn" id="continueBtn">Continuar</button>
+                    
+                    <div class="screen-indicator">
+                        <div class="indicator-dot"></div>
+                        <div class="indicator-dot"></div>
+                        <div class="indicator-dot active"></div>
+                        <div class="indicator-dot"></div>
+                        <div class="indicator-dot"></div>
+                        <div class="indicator-dot"></div>
+                        <div class="indicator-dot"></div>
+                    </div>
+                </div>
+                
+                <!-- Tela 4 - Tela Principal -->
+                <div class="screen" id="screen4">
+                    <div class="logo-container">
+                        <div class="logo-placeholder"><img src="accc.jpg" alt="Automatic Correction Logo"></div>
+                    </div>
+                    <h1 class="header-title">AUTOMATIC CORRECTION</h1>
+                    <p class="header-subtitle">AUTOMATIZE A CORREÇÃO, OTIMIZE SEU TEMPO!</p>
+                    
+                    <div class="main-menu">
+                        <div class="menu-item" id="importBtn">
+                            <div class="menu-icon">📤</div>
+                            <div class="menu-title">IMPORTAR GABARITOS</div>
+                        </div>
+                        <div class="menu-item" id="scanBtn">
+                            <div class="menu-icon">📷</div>
+                            <div class="menu-title">ESCANEAR</div>
+                            <div class="menu-subtitle">IMAGEM DO GABARITO</div>
+                        </div>
+                        <div class="menu-item" id="correctBtn">
+                            <div class="menu-icon">✔️</div>
+                            <div class="menu-title">CORRIGIR</div>
+                            <div class="menu-subtitle">COMPARAR COM O GABARITO OFICIAL</div>
+                        </div>
+                        <div class="menu-item" id="chartsBtn">
+                            <div class="menu-icon">📊</div>
+                            <div class="menu-title">GRÁFICOS DO DESEMPENHO DO ALUNO</div>
+                        </div>
+                        <div class="menu-item" id="tipsBtn">
+                            <div class="menu-icon">💡</div>
+                            <div class="menu-title">DICAS PARA MELHOR</div>
+                        </div>
+                        <div class="menu-item" id="addOfficialBtn">
+                            <div class="menu-icon">➕</div>
+                            <div class="menu-title">ADICIONE O GABARITO OFICIAL</div>
+                        </div>
+                    </div>
+                    
+                    <div class="screen-indicator">
+                        <div class="indicator-dot"></div>
+                        <div class="indicator-dot"></div>
+                        <div class="indicator-dot"></div>
+                        <div class="indicator-dot active"></div>
+                        <div class="indicator-dot"></div>
+                        <div class="indicator-dot"></div>
+                        <div class="indicator-dot"></div>
+                    </div>
+                </div>
+                
+                <!-- Tela 5 - Correção de Gabarito -->
+                <div class="screen" id="screen5">
+                    <div class="logo-container">
+                        <div class="logo-placeholder"><img src="accc.jpg" alt="Automatic Correction Logo"></div>
+                    </div>
+                    <h2 class="header-title">CORREÇÃO DE GABARITO</h2>
+                    <p class="header-subtitle">IMPORTE E CORRIJA SEUS GABARITOS</p>
+                    
+                    <div class="correction-container">
+                        <div class="upload-area" id="uploadArea">
+                            <input type="file" id="fileInput" class="file-input" accept="image/*">
+                            <div class="upload-icon">📤</div>
+                            <p>Clique para importar gabarito do aluno</p>
+                            <p style="font-size: 12px; margin-top: 5px;">Formatos suportados: JPG, PNG</p>
+                        </div>
+                        
+                        <div class="ocr-processing" id="ocrProcessing" style="display: none;">
+                            <div class="upload-icon">🔍</div>
+                            <p>Processando gabarito...</p>
+                            <div class="ocr-progress">
+                                <div class="ocr-progress-bar" id="ocrProgressBar"></div>
+                            </div>
+                            <div class="ocr-status" id="ocrStatus">Inicializando OCR...</div>
+                        </div>
+                        
+                        <div class="correction-result" id="correctionResult">
+                            <div class="result-header">RESULTADO DA CORREÇÃO</div>
+                            
+                            <div class="student-info" id="studentInfo">
+                                <p><strong>Aluno:</strong> João Silva</p>
+                                <p><strong>Turma:</strong> 9º Ano A</p>
+                                <p><strong>Data:</strong> <span id="currentDate"></span></p>
+                            </div>
+                            
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+                            </div>
+                            
+                            <div class="result-stats">
+                                <div class="stat-box correct-answers">
+                                    <div class="stat-number" id="correctCount">0</div>
+                                    <div>ACERTOS</div>
+                                </div>
+                                <div class="stat-box wrong-answers">
+                                    <div class="stat-number" id="wrongCount">0</div>
+                                    <div>ERROS</div>
+                                </div>
+                            </div>
+                            
+                            <h3>Questões:</h3>
+                            <div class="question-grid" id="questionGrid">
+                                <!-- As questões serão geradas via JavaScript -->
+                            </div>
+                            
+                            <button class="btn" id="viewChartsBtn">Ver Gráficos de Desempenho</button>
+                            <button class="back-btn" id="backToMainBtn">Voltar ao Menu Principal</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Tela 6 - Escaneamento de Gabarito -->
+                <div class="screen" id="screen6">
+                    <div class="logo-container">
+                        <div class="logo-placeholder"><img src="accc.jpg" alt="Automatic Correction Logo"></div>
+                    </div>
+                    <h2 class="header-title">ESCANEAMENTO DE GABARITO</h2>
+                    <p class="header-subtitle">POSICIONE O GABARITO DENTRO DA MOLDURA</p>
+                    
+                    <div class="scan-container">
+                        <div class="camera-preview" id="cameraPreview">
+                            <div class="camera-frame"></div>
+                            <div class="scanning-animation"></div>
+                            <p>Posicione o gabarito dentro do quadro</p>
+                        </div>
+                        
+                        <video id="cameraStream" autoplay playsinline style="display: none; width: 100%; height: 300px; object-fit: cover; border-radius: 15px;"></video>
+                        
+                        <img src="" alt="Gabarito escaneado" class="scanned-image" id="scannedImage">
+                        
+                        <button class="capture-btn" id="captureBtn">
+                            <i class="fas fa-camera"></i>
+                        </button>
+                        
+                        <div class="ocr-processing" id="ocrProcessingScan" style="display: none;">
+                            <div class="upload-icon">🔍</div>
+                            <p>Processando gabarito...</p>
+                            <div class="ocr-progress">
+                                <div class="ocr-progress-bar" id="ocrProgressBarScan"></div>
+                            </div>
+                            <div class="ocr-status" id="ocrStatusScan">Inicializando OCR...</div>
+                        </div>
+                        
+                        <div class="scan-result" id="scanResult">
+                            <div class="result-header">GABARITO ESCANEADO</div>
+                            
+                            <div class="answer-sheet">
+                                <h3>Respostas detectadas:</h3>
+                                <div id="detectedAnswers">
+                                    <!-- As respostas detectadas serão geradas via JavaScript -->
+                                </div>
+                            </div>
+                            
+                            <div class="correction-controls">
+                                <button class="btn btn-secondary" id="rescanBtn">Escanear Novamente</button>
+                                <button class="btn" id="proceedCorrectionBtn">Prosseguir para Correção</button>
+                            </div>
+                        </div>
+                        
+                        <button class="back-btn" id="backFromScanBtn">Voltar</button>
+                    </div>
+                </div>
+                
+                <!-- Tela 7 - Correção de Gabarito Escaneado -->
+                <div class="screen" id="screen7">
+                    <div class="logo-container">
+                        <div class="logo-placeholder"><img src="accc.jpg" alt="Automatic Correction Logo"></div>
+                    </div>
+                    <h2 class="header-title">CORREÇÃO DE GABARITO</h2>
+                    <p class="header-subtitle">COMPARE COM O GABARITO OFICIAL</p>
+                    
+                    <div class="correction-container">
+                        <div class="student-info">
+                            <p><strong>Aluno:</strong> <span id="studentName">João Silva</span></p>
+                            <p><strong>Turma:</strong> 9º Ano A</p>
+                            <p><strong>Data:</strong> <span id="correctionDate"></span></p>
+                        </div>
+                        
+                        <div class="answer-sheet">
+                            <h3>Respostas do Aluno vs Gabarito Oficial:</h3>
+                            <div id="comparisonSheet">
+                                <!-- A comparação será gerada via JavaScript -->
+                            </div>
+                        </div>
+                        
+                        <div class="result-stats" id="comparisonStats" style="display: none;">
+                            <div class="stat-box correct-answers">
+                                <div class="stat-number" id="comparisonCorrectCount">0</div>
+                                <div>ACERTOS</div>
+                            </div>
+                            <div class="stat-box wrong-answers">
+                                <div class="stat-number" id="comparisonWrongCount">0</div>
+                                <div>ERROS</div>
+                            </div>
+                        </div>
+                        
+                        <div class="correction-controls">
+                            <button class="btn btn-secondary" id="editAnswersBtn">Editar Respostas</button>
+                            <button class="btn" id="finalizeCorrectionBtn">Finalizar Correção</button>
+                        </div>
+                        
+                        <button class="back-btn" id="backFromCorrectionBtn">Voltar</button>
+                    </div>
+                </div>
+                
+                <!-- Tela 8 - Gráficos de Desempenho -->
+                <div class="screen" id="screen8">
+                    <div class="logo-container">
+                        <div class="logo-placeholder"><img src="accc.jpg" alt="Automatic Correction Logo"></div>
+                    </div>
+                    <h2 class="header-title">DESEMPENHO DO ALUNO</h2>
+                    <p class="header-subtitle">ANÁLISE DETALHADA DO DESEMPENHO</p>
+                    
+                    <div class="charts-container">
+                        <div class="student-info">
+                            <p><strong>Aluno:</strong> João Silva</p>
+                            <p><strong>Turma:</strong> 9º Ano A</p>
+                            <p><strong>Período:</strong> 2º Semestre 2023</p>
+                        </div>
+                        
+                        <div class="performance-summary">
+                            <div class="summary-card">
+                                <div class="summary-value">66.7%</div>
+                                <div class="summary-label">DESEMPENHO ATUAL</div>
+                            </div>
+                            <div class="summary-card">
+                                <div class="summary-value">+5.2%</div>
+                                <div class="summary-label">EVOLUÇÃO</div>
+                            </div>
+                        </div>
+                        
+                        <div class="chart-card">
+                            <div class="chart-title">DESEMPENHO POR MATÉRIA</div>
+                            <div class="chart-container">
+                                <canvas id="subjectChart"></canvas>
+                            </div>
+                        </div>
+                        
+                        <div class="chart-card">
+                            <div class="chart-title">EVOLUÇÃO DO DESEMPENHO</div>
+                            <div class="chart-container">
+                                <canvas id="progressChart"></canvas>
+                            </div>
+                        </div>
+                        
+                        <div class="chart-card">
+                            <div class="chart-title">DISTRIBUIÇÃO DE ACERTOS</div>
+                            <div class="chart-container">
+                                <canvas id="distributionChart"></canvas>
+                            </div>
+                        </div>
+                        
+                        <button class="back-btn" id="backFromChartsBtn">Voltar</button>
+                    </div>
+                </div>
+                
+                <!-- Tela 9 - Dicas Personalizadas -->
+                <div class="screen" id="screen9">
+                    <div class="logo-container">
+                        <div class="logo-placeholder"><img src="accc.jpg" alt="Automatic Correction Logo"></div>
+                    </div>
+                    <h2 class="header-title">DICAS PERSONALIZADAS</h2>
+                    <p class="header-subtitle">SUGESTÕES PARA MELHORAR O DESEMPENHO</p>
+                    
+                    <div class="tips-container">
+                        <div class="student-info">
+                            <p><strong>Aluno:</strong> João Silva</p>
+                            <p><strong>Turma:</strong> 9º Ano A</p>
+                            <p><strong>Desempenho Geral:</strong> 66.7%</p>
+                        </div>
+                        
+                        <div class="tip-card">
+                            <div class="tip-title">
+                                <span class="tip-icon">📚</span>
+                                <span>Foco em Matemática</span>
+                            </div>
+                            <div class="tip-content">
+                                Seu desempenho em Matemática está abaixo da média da turma. Recomendamos praticar mais exercícios de álgebra e geometria, que são suas principais áreas de dificuldade.
+                            </div>
+                            <div class="tip-stats">
+                                <span>Desempenho: 55%</span>
+                                <span>Média da turma: 72%</span>
+                            </div>
+                        </div>
+                        
+                        <div class="tip-card">
+                            <div class="tip-title">
+                                <span class="tip-icon">⏱️</span>
+                                <span>Gestão de Tempo</span>
+                            </div>
+                            <div class="tip-content">
+                                Você tende a deixar questões em branco no final da prova. Pratique resolver exercícios com tempo limitado para melhorar sua velocidade.
+                            </div>
+                            <div class="tip-stats">
+                                <span>Questões em branco: 8%</span>
+                                <span>Recomendação: &lt; 3%</span>
+                            </div>
+                        </div>
+                        
+                        <div class="tip-card">
+                            <div class="tip-title">
+                                <span class="tip-icon">🔍</span>
+                                <span>Interpretação de Texto</span>
+                            </div>
+                            <div class="tip-content">
+                                Em Português, você tem dificuldade com questões de interpretação. Pratique a leitura atenta e faça resumos dos textos para melhor compreensão.
+                            </div>
+                            <div class="tip-stats">
+                                <span>Acertos em interpretação: 60%</span>
+                                <span>Outras áreas: 85%</span>
+                            </div>
+                        </div>
+                        
+                        <div class="tip-card">
+                            <div class="tip-title">
+                                <span class="tip-icon">📈</span>
+                                <span>Revisão de Conteúdo</span>
+                            </div>
+                            <div class="tip-content">
+                                Seu desempenho em Ciências melhorou 15% desde o último bimestre. Continue revisando os conteúdos de forma consistente para manter essa evolução.
+                            </div>
+                            <div class="tip-stats">
+                                <span>Evolução: +15%</span>
+                                <span>Desempenho atual: 75%</span>
+                            </div>
+                        </div>
+                        
+                        <div class="tip-card">
+                            <div class="tip-title">
+                                <span class="tip-icon">🎯</span>
+                                <span>Estratégia de Prova</span>
+                            </div>
+                            <div class="tip-content">
+                                Você acerta 90% das questões que revisa. Aumente o tempo de revisão no final da prova para melhorar seu desempenho geral.
+                            </div>
+                            <div class="tip-stats">
+                                <span>Taxa de acerto com revisão: 90%</span>
+                                <span>Taxa de acerto sem revisão: 60%</span>
+                            </div>
+                        </div>
+                        
+                        <button class="back-btn" id="backFromTipsBtn">Voltar</button>
+                    </div>
+                </div>
+                
+                <!-- Tela 10 - Adicionar Gabarito Oficial -->
+                <div class="screen" id="screen10">
+                    <div class="logo-container">
+                        <div class="logo-placeholder"><img src="accc.jpg" alt="Automatic Correction Logo"></div>
+                    </div>
+                    <h2 class="header-title">ADICIONAR GABARITO OFICIAL</h2>
+                    <p class="header-subtitle">SELECIONE UMA IMAGEM DO GABARITO OFICIAL</p>
+                    
+                    <div class="official-answer-container">
+                        <div class="upload-area" id="officialUploadArea">
+                            <input type="file" id="officialFileInput" class="file-input" accept="image/*">
+                            <div class="upload-icon">📄</div>
+                            <p>Clique para selecionar o gabarito oficial</p>
+                            <p style="font-size: 12px; margin-top: 5px;">Formatos suportados: JPG, PNG</p>
+                        </div>
+                        
+                        <div class="ocr-processing" id="ocrProcessingOfficial" style="display: none;">
+                            <div class="upload-icon">🔍</div>
+                            <p>Processando gabarito oficial...</p>
+                            <div class="ocr-progress">
+                                <div class="ocr-progress-bar" id="ocrProgressBarOfficial"></div>
+                            </div>
+                            <div class="ocr-status" id="ocrStatusOfficial">Inicializando OCR...</div>
+                        </div>
+                        
+                        <div class="correction-result" id="officialUploadResult" style="display: none;">
+                            <div class="result-header">GABARITO OFICIAL ADICIONADO</div>
+                            
+                            <div class="student-info">
+                                <p><strong>Gabarito:</strong> <span id="officialTestName">Prova Bimestral - 2º Bimestre</span></p>
+                                <p><strong>Número de questões:</strong> <span id="officialQuestionCount">0</span></p>
+                                <p><strong>Data:</strong> <span id="officialDate"></span></p>
+                            </div>
+                            
+                            <div class="answer-sheet">
+                                <h3>Respostas do Gabarito Oficial:</h3>
+                                <div id="officialAnswers">
+                                    <!-- As respostas do gabarito oficial serão geradas via JavaScript -->
+                                </div>
+                            </div>
+                            
+                            <div class="correction-controls">
+                                <button class="btn" id="useOfficialBtn">Usar este Gabarito</button>
+                                <button class="btn btn-secondary" id="editOfficialBtn">Editar Respostas</button>
+                            </div>
+                            <button class="back-btn" id="backFromOfficialBtn">Voltar</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="phone-nav">
+                <div class="nav-btn"></div>
+                <div class="home-btn" id="homeBtn"></div>
+                <div class="nav-btn"></div>
+            </div>
+        </div>
+    </div>
+    
+    <button class="next-btn" id="nextBtn">→</button>
+
+    <script>
+        // Variáveis globais para o aplicativo
+        let currentScreen = 1;
+        let stream = null;
+        let officialAnswerKey = []; // Armazena o gabarito oficial
+        let scannedAnswers = []; // Armazena as respostas escaneadas
+        let currentStudentAnswers = []; // Armazena as respostas do aluno atual
+        let studentResults = []; // Armazena resultados dos alunos
+        let isLoggedIn = false;
+        let userEmail = '';
+        let userName = '';
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Elementos da tela
+            const screen1 = document.getElementById('screen1');
+            const screen2 = document.getElementById('screen2');
+            const screen3 = document.getElementById('screen3');
+            const screen4 = document.getElementById('screen4');
+            const screen5 = document.getElementById('screen5');
+            const screen6 = document.getElementById('screen6');
+            const screen7 = document.getElementById('screen7');
+            const screen8 = document.getElementById('screen8');
+            const screen9 = document.getElementById('screen9');
+            const screen10 = document.getElementById('screen10');
+            const nextBtn = document.getElementById('nextBtn');
+            const homeBtn = document.getElementById('homeBtn');
+            
+            // Elementos de login
+            const registerBtn = document.getElementById('registerBtn');
+            const continueBtn = document.getElementById('continueBtn');
+            const skipLogin = document.getElementById('skipLogin');
+            const successMessage = document.getElementById('successMessage');
+            
+            // Elementos do menu principal
+            const importBtn = document.getElementById('importBtn');
+            const scanBtn = document.getElementById('scanBtn');
+            const correctBtn = document.getElementById('correctBtn');
+            const chartsBtn = document.getElementById('chartsBtn');
+            const tipsBtn = document.getElementById('tipsBtn');
+            const addOfficialBtn = document.getElementById('addOfficialBtn');
+            
+            // Elementos da tela de correção
+            const uploadArea = document.getElementById('uploadArea');
+            const fileInput = document.getElementById('fileInput');
+            const ocrProcessing = document.getElementById('ocrProcessing');
+            const ocrProgressBar = document.getElementById('ocrProgressBar');
+            const ocrStatus = document.getElementById('ocrStatus');
+            const correctionResult = document.getElementById('correctionResult');
+            const questionGrid = document.getElementById('questionGrid');
+            const correctCount = document.getElementById('correctCount');
+            const wrongCount = document.getElementById('wrongCount');
+            const progressFill = document.getElementById('progressFill');
+            const viewChartsBtn = document.getElementById('viewChartsBtn');
+            const backToMainBtn = document.getElementById('backToMainBtn');
+            const currentDate = document.getElementById('currentDate');
+            
+            // Elementos da tela de escaneamento
+            const cameraPreview = document.getElementById('cameraPreview');
+            const cameraStream = document.getElementById('cameraStream');
+            const scannedImage = document.getElementById('scannedImage');
+            const captureBtn = document.getElementById('captureBtn');
+            const ocrProcessingScan = document.getElementById('ocrProcessingScan');
+            const ocrProgressBarScan = document.getElementById('ocrProgressBarScan');
+            const ocrStatusScan = document.getElementById('ocrStatusScan');
+            const scanResult = document.getElementById('scanResult');
+            const detectedAnswers = document.getElementById('detectedAnswers');
+            const rescanBtn = document.getElementById('rescanBtn');
+            const proceedCorrectionBtn = document.getElementById('proceedCorrectionBtn');
+            const backFromScanBtn = document.getElementById('backFromScanBtn');
+            
+            // Elementos da tela de correção comparativa
+            const comparisonSheet = document.getElementById('comparisonSheet');
+            const comparisonStats = document.getElementById('comparisonStats');
+            const comparisonCorrectCount = document.getElementById('comparisonCorrectCount');
+            const comparisonWrongCount = document.getElementById('comparisonWrongCount');
+            const editAnswersBtn = document.getElementById('editAnswersBtn');
+            const finalizeCorrectionBtn = document.getElementById('finalizeCorrectionBtn');
+            const backFromCorrectionBtn = document.getElementById('backFromCorrectionBtn');
+            const studentName = document.getElementById('studentName');
+            const correctionDate = document.getElementById('correctionDate');
+            
+            // Elementos da tela de gabarito oficial
+            const officialUploadArea = document.getElementById('officialUploadArea');
+            const officialFileInput = document.getElementById('officialFileInput');
+            const ocrProcessingOfficial = document.getElementById('ocrProcessingOfficial');
+            const ocrProgressBarOfficial = document.getElementById('ocrProgressBarOfficial');
+            const ocrStatusOfficial = document.getElementById('ocrStatusOfficial');
+            const officialUploadResult = document.getElementById('officialUploadResult');
+            const officialAnswers = document.getElementById('officialAnswers');
+            const officialTestName = document.getElementById('officialTestName');
+            const officialQuestionCount = document.getElementById('officialQuestionCount');
+            const officialDate = document.getElementById('officialDate');
+            const useOfficialBtn = document.getElementById('useOfficialBtn');
+            const editOfficialBtn = document.getElementById('editOfficialBtn');
+            const backFromOfficialBtn = document.getElementById('backFromOfficialBtn');
+            
+            // Elementos de navegação
+            const backFromChartsBtn = document.getElementById('backFromChartsBtn');
+            const backFromTipsBtn = document.getElementById('backFromTipsBtn');
+            
+            // Elementos do modal
+            const imageModal = document.getElementById('imageModal');
+            const modalImage = document.getElementById('modalImage');
+            const closeModal = document.getElementById('closeModal');
+            
+            // Inicializar data atual
+            const now = new Date();
+            const formattedDate = `${now.getDate().toString().padStart(2, '0')}/${(now.getMonth()+1).toString().padStart(2, '0')}/${now.getFullYear()}`;
+            if (currentDate) currentDate.textContent = formattedDate;
+            if (correctionDate) correctionDate.textContent = formattedDate;
+            if (officialDate) officialDate.textContent = formattedDate;
+            
+            // Configurar Google Sign-In
+            function initializeGoogleSignIn() {
+                // Esta função será chamada quando a biblioteca do Google carregar
+                google.accounts.id.initialize({
+                    client_id: "YOUR_GOOGLE_CLIENT_ID", // Substitua com seu Client ID real
+                    callback: handleGoogleSignIn
+                });
+                
+                google.accounts.id.renderButton(
+                    document.getElementById("googleLoginContainer"),
+                    { 
+                        theme: "outline", 
+                        size: "large",
+                        width: "300",
+                        text: "signin_with",
+                        shape: "pill"
+                    }
+                );
+                
+                google.accounts.id.prompt();
+            }
+            
+            // Função para lidar com o login do Google
+            function handleGoogleSignIn(response) {
+                // Decodificar o token JWT
+                const responsePayload = JSON.parse(atob(response.credential.split('.')[1]));
+                
+                // Extrair informações do usuário
+                userName = responsePayload.name;
+                userEmail = responsePayload.email;
+                isLoggedIn = true;
+                
+                // Atualizar mensagem de sucesso
+                successMessage.innerHTML = `Login realizado com sucesso!<br>Bem-vindo(a), ${userName}`;
+                
+                // Ir para a tela de sucesso
+                goToScreen(3);
+            }
+            
+            // Função para alternar entre as telas
+            function goToScreen(screenNumber) {
+                // Atualizar indicadores de tela
+                updateScreenIndicators(screenNumber);
+                
+                // Esconder todas as telas
+                screen1.classList.remove('active');
+                screen2.classList.remove('active');
+                screen3.classList.remove('active');
+                screen4.classList.remove('active');
+                screen5.classList.remove('active');
+                screen6.classList.remove('active');
+                screen7.classList.remove('active');
+                screen8.classList.remove('active');
+                screen9.classList.remove('active');
+                screen10.classList.remove('active');
+                
+                // Mostrar a tela desejada
+                if (screenNumber === 1) {
+                    screen1.classList.add('active');
+                    nextBtn.textContent = "→";
+                    nextBtn.style.display = "flex";
+                } else if (screenNumber === 2) {
+                    screen2.classList.add('active');
+                    nextBtn.textContent = "→";
+                    nextBtn.style.display = "flex";
+                } else if (screenNumber === 3) {
+                    screen3.classList.add('active');
+                    nextBtn.textContent = "→";
+                    nextBtn.style.display = "flex";
+                } else if (screenNumber === 4) {
+                    screen4.classList.add('active');
+                    nextBtn.style.display = "none";
+                } else if (screenNumber === 5) {
+                    screen5.classList.add('active');
+                    nextBtn.style.display = "none";
+                    // Resetar tela de correção
+                    resetCorrectionScreen();
+                } else if (screenNumber === 6) {
+                    screen6.classList.add('active');
+                    nextBtn.style.display = "none";
+                    // Iniciar câmera quando a tela de escaneamento for aberta
+                    startCamera();
+                } else if (screenNumber === 7) {
+                    screen7.classList.add('active');
+                    nextBtn.style.display = "none";
+                    // Verificar se há gabarito oficial e respostas escaneadas
+                    if (officialAnswerKey.length === 0) {
+                        alert('Por favor, adicione um gabarito oficial primeiro!');
+                        goToScreen(10);
+                        return;
+                    }
+                    if (scannedAnswers.length === 0) {
+                        alert('Por favor, escaneie um gabarito primeiro!');
+                        goToScreen(6);
+                        return;
+                    }
+                    // Inicializar comparação
+                    initializeComparison();
+                } else if (screenNumber === 8) {
+                    screen8.classList.add('active');
+                    nextBtn.style.display = "none";
+                    // Inicializar gráficos quando a tela for carregada
+                    setTimeout(initializeCharts, 300);
+                } else if (screenNumber === 9) {
+                    screen9.classList.add('active');
+                    nextBtn.style.display = "none";
+                } else if (screenNumber === 10) {
+                    screen10.classList.add('active');
+                    nextBtn.style.display = "none";
+                    // Resetar tela de gabarito oficial
+                    resetOfficialScreen();
+                }
+                
+                currentScreen = screenNumber;
+            }
+            
+            // Atualizar indicadores de tela
+            function updateScreenIndicators(screenNumber) {
+                const indicators = document.querySelectorAll('.indicator-dot');
+                indicators.forEach((dot, index) => {
+                    if (index === screenNumber - 1) {
+                        dot.classList.add('active');
+                    } else {
+                        dot.classList.remove('active');
+                    }
+                });
+            }
+            
+            // Event listener para o botão de próxima tela
+            nextBtn.addEventListener('click', function() {
+                if (currentScreen === 1) {
+                    goToScreen(2);
+                } else if (currentScreen === 2) {
+                    // Validar formulário antes de prosseguir
+                    const email = document.getElementById('email').value;
+                    const password = document.getElementById('password').value;
+                    
+                    if (email && password) {
+                        // Simular cadastro local
+                        userName = email.split('@')[0];
+                        userEmail = email;
+                        isLoggedIn = true;
+                        successMessage.innerHTML = `Cadastro realizado com sucesso!<br>Bem-vindo(a), ${userName}`;
+                        goToScreen(3);
+                    } else {
+                        alert('Por favor, preencha todos os campos!');
+                    }
+                } else if (currentScreen === 3) {
+                    goToScreen(4);
+                }
+            });
+            
+            // Event listener para o botão de cadastro
+            registerBtn.addEventListener('click', function() {
+                // Validar formulário
+                const email = document.getElementById('email').value;
+                const password = document.getElementById('password').value;
+                
+                if (email && password) {
+                    // Simular cadastro local
+                    userName = email.split('@')[0];
+                    userEmail = email;
+                    isLoggedIn = true;
+                    successMessage.innerHTML = `Cadastro realizado com sucesso!<br>Bem-vindo(a), ${userName}`;
+                    goToScreen(3);
+                } else {
+                    alert('Por favor, preencha todos os campos!');
+                }
+            });
+            
+            // Event listener para continuar sem login
+            skipLogin.addEventListener('click', function(e) {
+                e.preventDefault();
+                userName = 'Usuário';
+                userEmail = 'convidado@exemplo.com';
+                isLoggedIn = false;
+                successMessage.innerHTML = `Continuando como convidado.<br>Algumas funcionalidades podem ser limitadas.`;
+                goToScreen(3);
+            });
+            
+            // Event listener para o botão de continuar
+            continueBtn.addEventListener('click', function() {
+                goToScreen(4);
+            });
+            
+            // Event listener para o botão home
+            homeBtn.addEventListener('click', function() {
+                if (currentScreen !== 4) {
+                    goToScreen(4);
+                }
+            });
+            
+            // Event listener para o botão de importar gabaritos
+            importBtn.addEventListener('click', function() {
+                goToScreen(5);
+            });
+            
+            // Event listener para o botão de escanear
+            scanBtn.addEventListener('click', function() {
+                goToScreen(6);
+            });
+            
+            // Event listener para o botão de corrigir
+            correctBtn.addEventListener('click', function() {
+                // Verificar se já existe um gabarito escaneado
+                if (scannedAnswers.length > 0) {
+                    goToScreen(7);
+                } else {
+                    alert('Por favor, escaneie um gabarito primeiro!');
+                }
+            });
+            
+            // Event listener para o botão de gráficos
+            chartsBtn.addEventListener('click', function() {
+                goToScreen(8);
+            });
+            
+            // Event listener para o botão de dicas personalizadas
+            tipsBtn.addEventListener('click', function() {
+                goToScreen(9);
+            });
+            
+            // Event listener para o botão de adicionar gabarito oficial
+            addOfficialBtn.addEventListener('click', function() {
+                goToScreen(10);
+            });
+            
+            // Event listener para a área de upload de gabaritos
+            uploadArea.addEventListener('click', function() {
+                fileInput.click();
+            });
+            
+            // Event listener para o input de arquivo de gabaritos
+            fileInput.addEventListener('change', function() {
+                if (fileInput.files && fileInput.files[0]) {
+                    processAnswerSheet(fileInput.files[0], 'upload');
+                }
+            });
+            
+            // Event listener para a área de upload de gabarito oficial
+            officialUploadArea.addEventListener('click', function() {
+                officialFileInput.click();
+            });
+            
+            // Event listener para o input de arquivo de gabarito oficial
+            officialFileInput.addEventListener('change', function() {
+                if (officialFileInput.files && officialFileInput.files[0]) {
+                    processAnswerSheet(officialFileInput.files[0], 'official');
+                }
+            });
+            
+            // Event listener para o botão de usar gabarito oficial
+            useOfficialBtn.addEventListener('click', function() {
+                alert(`Gabarito oficial configurado com sucesso!\nTotal de questões: ${officialAnswerKey.length}`);
+                goToScreen(4);
+            });
+            
+            // Event listener para o botão de editar gabarito oficial
+            editOfficialBtn.addEventListener('click', function() {
+                enableOfficialAnswerEditing();
+            });
+            
+            // Event listener para o botão de ver gráficos
+            viewChartsBtn.addEventListener('click', function() {
+                goToScreen(8);
+            });
+            
+            // Event listener para o botão de voltar ao menu principal
+            backToMainBtn.addEventListener('click', function() {
+                goToScreen(4);
+            });
+            
+            // Event listener para o botão de voltar dos gráficos
+            backFromChartsBtn.addEventListener('click', function() {
+                if (correctionResult.style.display === 'block') {
+                    goToScreen(5);
+                } else {
+                    goToScreen(4);
+                }
+            });
+            
+            // Event listener para o botão de voltar das dicas
+            backFromTipsBtn.addEventListener('click', function() {
+                goToScreen(4);
+            });
+            
+            // Event listener para o botão de voltar do gabarito oficial
+            backFromOfficialBtn.addEventListener('click', function() {
+                goToScreen(4);
+            });
+            
+            // Event listener para o botão de captura na tela de escaneamento
+            captureBtn.addEventListener('click', function() {
+                captureImageFromCamera();
+            });
+            
+            // Event listener para o botão de escanear novamente
+            rescanBtn.addEventListener('click', function() {
+                resetScanScreen();
+            });
+            
+            // Event listener para o botão de prosseguir para correção
+            proceedCorrectionBtn.addEventListener('click', function() {
+                goToScreen(7);
+            });
+            
+            // Event listener para o botão de voltar da tela de escaneamento
+            backFromScanBtn.addEventListener('click', function() {
+                stopCamera();
+                goToScreen(4);
+            });
+            
+            // Event listener para o botão de editar respostas
+            editAnswersBtn.addEventListener('click', function() {
+                enableAnswerEditing();
+            });
+            
+            // Event listener para o botão de finalizar correção
+            finalizeCorrectionBtn.addEventListener('click', function() {
+                // Calcular resultado da correção
+                const result = calculateCorrectionResult(currentStudentAnswers, officialAnswerKey);
+                
+                // Salvar resultado
+                studentResults.push({
+                    studentName: studentName.textContent,
+                    date: correctionDate.textContent,
+                    correct: result.correct,
+                    wrong: result.wrong,
+                    total: result.total,
+                    percentage: result.percentage
+                });
+                
+                // Atualizar tela de correção
+                updateCorrectionResult(result);
+                
+                // Ir para tela de resultados
+                goToScreen(5);
+            });
+            
+            // Event listener para o botão de voltar da tela de correção
+            backFromCorrectionBtn.addEventListener('click', function() {
+                goToScreen(6);
+            });
+            
+            // Event listener para fechar modal
+            closeModal.addEventListener('click', function() {
+                imageModal.style.display = 'none';
+            });
+            
+            // Fechar modal ao clicar fora da imagem
+            imageModal.addEventListener('click', function(e) {
+                if (e.target === imageModal) {
+                    imageModal.style.display = 'none';
+                }
+            });
+            
+            // Alternar entre telas com o pressionamento de tecla (seta direita ou esquerda)
+            document.addEventListener('keydown', function(event) {
+                if (event.key === 'ArrowRight') {
+                    if (currentScreen === 1) {
+                        goToScreen(2);
+                    } else if (currentScreen === 2) {
+                        // Validar formulário antes de prosseguir
+                        const email = document.getElementById('email').value;
+                        const password = document.getElementById('password').value;
+                        
+                        if (email && password) {
+                            // Simular cadastro local
+                            userName = email.split('@')[0];
+                            userEmail = email;
+                            isLoggedIn = true;
+                            successMessage.innerHTML = `Cadastro realizado com sucesso!<br>Bem-vindo(a), ${userName}`;
+                            goToScreen(3);
+                        }
+                    } else if (currentScreen === 3) {
+                        goToScreen(4);
+                    }
+                } else if (event.key === 'ArrowLeft') {
+                    if (currentScreen === 2) {
+                        goToScreen(1);
+                    } else if (currentScreen === 3) {
+                        goToScreen(2);
+                    } else if (currentScreen === 4) {
+                        goToScreen(3);
+                        nextBtn.style.display = "flex";
+                    } else if (currentScreen === 5) {
+                        goToScreen(4);
+                    } else if (currentScreen === 6) {
+                        goToScreen(4);
+                    } else if (currentScreen === 7) {
+                        goToScreen(6);
+                    } else if (currentScreen === 8) {
+                        if (correctionResult.style.display === 'block') {
+                            goToScreen(5);
+                        } else {
+                            goToScreen(4);
+                        }
+                    } else if (currentScreen === 9) {
+                        goToScreen(4);
+                    } else if (currentScreen === 10) {
+                        goToScreen(4);
+                    }
+                }
+            });
+            
+            // Função para processar gabarito (OCR)
+            async function processAnswerSheet(file, type) {
+                // Mostrar tela de processamento
+                if (type === 'upload') {
+                    uploadArea.style.display = 'none';
+                    ocrProcessing.style.display = 'block';
+                } else if (type === 'official') {
+                    officialUploadArea.style.display = 'none';
+                    ocrProcessingOfficial.style.display = 'block';
+                } else if (type === 'scan') {
+                    scanResult.style.display = 'none';
+                    ocrProcessingScan.style.display = 'block';
+                }
+                
+                // Criar URL da imagem
+                const imageUrl = URL.createObjectURL(file);
+                
+                // Exibir imagem
+                if (type === 'upload' || type === 'official') {
+                    // Criar visualização da imagem
+                    const img = document.createElement('img');
+                    img.src = imageUrl;
+                    img.style.maxWidth = '100%';
+                    img.style.borderRadius = '10px';
+                    img.style.cursor = 'pointer';
+                    img.onclick = function() {
+                        modalImage.src = imageUrl;
+                        imageModal.style.display = 'flex';
+                    };
+                    
+                    const processingDiv = type === 'upload' ? ocrProcessing : ocrProcessingOfficial;
+                    processingDiv.appendChild(img);
+                }
+                
+                try {
+                    // Atualizar status
+                    updateOCRStatus('Carregando imagem...', type);
+                    
+                    // Simular processamento OCR (em produção, usar Tesseract.js real)
+                    // Para demonstração, vamos simular respostas
+                    
+                    // Gerar número aleatório de questões (10-30)
+                    const questionCount = Math.floor(Math.random() * 21) + 10;
+                    
+                    // Simular progresso
+                    for (let i = 0; i <= 100; i += 10) {
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                        updateOCRProgress(i, type);
+                        updateOCRStatus(`Processando... ${i}%`, type);
+                    }
+                    
+                    // Gerar respostas simuladas
+                    const answers = generateRandomAnswers(questionCount);
+                    
+                    // Atualizar status final
+                    updateOCRStatus('Processamento concluído!', type);
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    
+                    // Processar com base no tipo
+                    if (type === 'upload') {
+                        processStudentAnswers(answers, file.name);
+                    } else if (type === 'official') {
+                        processOfficialAnswers(answers, file.name);
+                    } else if (type === 'scan') {
+                        processScannedAnswers(answers);
+                    }
+                    
+                } catch (error) {
+                    console.error('Erro no processamento OCR:', error);
+                    updateOCRStatus('Erro no processamento. Tente novamente.', type);
+                    
+                    // Restaurar tela após erro
+                    setTimeout(() => {
+                        if (type === 'upload') {
+                            ocrProcessing.style.display = 'none';
+                            uploadArea.style.display = 'block';
+                        } else if (type === 'official') {
+                            ocrProcessingOfficial.style.display = 'none';
+                            officialUploadArea.style.display = 'block';
+                        } else if (type === 'scan') {
+                            ocrProcessingScan.style.display = 'none';
+                            scanResult.style.display = 'block';
+                        }
+                    }, 2000);
+                }
+            }
+            
+            // Função para atualizar progresso do OCR
+            function updateOCRProgress(percent, type) {
+                if (type === 'upload') {
+                    ocrProgressBar.style.width = `${percent}%`;
+                } else if (type === 'official') {
+                    ocrProgressBarOfficial.style.width = `${percent}%`;
+                } else if (type === 'scan') {
+                    ocrProgressBarScan.style.width = `${percent}%`;
+                }
+            }
+            
+            // Função para atualizar status do OCR
+            function updateOCRStatus(text, type) {
+                if (type === 'upload') {
+                    ocrStatus.textContent = text;
+                } else if (type === 'official') {
+                    ocrStatusOfficial.textContent = text;
+                } else if (type === 'scan') {
+                    ocrStatusScan.textContent = text;
+                }
+            }
+            
+            // Função para processar respostas do aluno
+            function processStudentAnswers(answers, fileName) {
+                currentStudentAnswers = answers;
+                
+                // Ocultar processamento e mostrar resultado
+                ocrProcessing.style.display = 'none';
+                correctionResult.style.display = 'block';
+                
+                // Atualizar informações do aluno
+                const studentInfo = document.getElementById('studentInfo');
+                studentInfo.innerHTML = `
+                    <p><strong>Aluno:</strong> ${fileName.split('.')[0]}</p>
+                    <p><strong>Turma:</strong> ${getRandomClass()}</p>
+                    <p><strong>Data:</strong> ${formattedDate}</p>
+                `;
+                
+                // Calcular resultado (comparar com gabarito oficial se existir)
+                let result;
+                if (officialAnswerKey.length > 0) {
+                    result = calculateCorrectionResult(answers, officialAnswerKey);
+                } else {
+                    // Sem gabarito oficial, mostrar apenas as respostas detectadas
+                    result = {
+                        correct: 0,
+                        wrong: 0,
+                        total: answers.length,
+                        percentage: 0
+                    };
+                }
+                
+                // Atualizar resultado
+                updateCorrectionResult(result);
+            }
+            
+            // Função para processar gabarito oficial
+            function processOfficialAnswers(answers, fileName) {
+                officialAnswerKey = answers;
+                
+                // Ocultar processamento e mostrar resultado
+                ocrProcessingOfficial.style.display = 'none';
+                officialUploadResult.style.display = 'block';
+                
+                // Atualizar informações
+                officialTestName.textContent = fileName.split('.')[0];
+                officialQuestionCount.textContent = answers.length;
+                
+                // Exibir respostas
+                displayOfficialAnswers(answers);
+            }
+            
+            // Função para processar respostas escaneadas
+            function processScannedAnswers(answers) {
+                scannedAnswers = answers;
+                
+                // Ocultar processamento e mostrar resultado
+                ocrProcessingScan.style.display = 'none';
+                scanResult.style.display = 'block';
+                
+                // Exibir respostas detectadas
+                displayDetectedAnswers(answers);
+            }
+            
+            // Função para exibir respostas detectadas
+            function displayDetectedAnswers(answers) {
+                detectedAnswers.innerHTML = '';
+                
+                for (let i = 0; i < answers.length; i++) {
+                    const answerRow = document.createElement('div');
+                    answerRow.classList.add('answer-row');
+                    
+                    const questionNumber = document.createElement('div');
+                    questionNumber.classList.add('question-number');
+                    questionNumber.textContent = (i + 1) + '.';
+                    
+                    const answerOptions = document.createElement('div');
+                    answerOptions.classList.add('answer-options');
+                    
+                    const options = ['A', 'B', 'C', 'D', 'E'];
+                    
+                    options.forEach(option => {
+                        const answerOption = document.createElement('div');
+                        answerOption.classList.add('answer-option');
+                        answerOption.textContent = option;
+                        
+                        if (option === answers[i]) {
+                            answerOption.classList.add('selected');
+                        }
+                        
+                        answerOptions.appendChild(answerOption);
+                    });
+                    
+                    answerRow.appendChild(questionNumber);
+                    answerRow.appendChild(answerOptions);
+                    detectedAnswers.appendChild(answerRow);
+                }
+            }
+            
+            // Função para exibir gabarito oficial
+            function displayOfficialAnswers(answers) {
+                officialAnswers.innerHTML = '';
+                
+                for (let i = 0; i < answers.length; i++) {
+                    const answerRow = document.createElement('div');
+                    answerRow.classList.add('answer-row');
+                    
+                    const questionNumber = document.createElement('div');
+                    questionNumber.classList.add('question-number');
+                    questionNumber.textContent = (i + 1) + '.';
+                    
+                    const answerOptions = document.createElement('div');
+                    answerOptions.classList.add('answer-options');
+                    
+                    const options = ['A', 'B', 'C', 'D', 'E'];
+                    
+                    options.forEach(option => {
+                        const answerOption = document.createElement('div');
+                        answerOption.classList.add('answer-option');
+                        answerOption.textContent = option;
+                        
+                        if (option === answers[i]) {
+                            answerOption.classList.add('selected');
+                            answerOption.classList.add('correct');
+                        }
+                        
+                        answerOptions.appendChild(answerOption);
+                    });
+                    
+                    answerRow.appendChild(questionNumber);
+                    answerRow.appendChild(answerOptions);
+                    officialAnswers.appendChild(answerRow);
+                }
+            }
+            
+            // Função para inicializar a comparação entre respostas
+            function initializeComparison() {
+                comparisonSheet.innerHTML = '';
+                
+                // Usar respostas escaneadas ou do aluno atual
+                const answersToCompare = scannedAnswers.length > 0 ? scannedAnswers : currentStudentAnswers;
+                
+                if (answersToCompare.length === 0) {
+                    comparisonSheet.innerHTML = '<p style="text-align: center; color: #666;">Nenhuma resposta para comparar.</p>';
+                    return;
+                }
+                
+                // Atualizar nome do aluno se disponível
+                if (scannedAnswers.length > 0) {
+                    studentName.textContent = 'Aluno (Gabarito Escaneado)';
+                }
+                
+                let correctCount = 0;
+                let wrongCount = 0;
+                
+                for (let i = 0; i < Math.min(answersToCompare.length, officialAnswerKey.length); i++) {
+                    const answerRow = document.createElement('div');
+                    answerRow.classList.add('answer-row');
+                    
+                    const questionNumber = document.createElement('div');
+                    questionNumber.classList.add('question-number');
+                    questionNumber.textContent = (i + 1) + '.';
+                    
+                    const answerOptions = document.createElement('div');
+                    answerOptions.classList.add('answer-options');
+                    
+                    const options = ['A', 'B', 'C', 'D', 'E'];
+                    const studentAnswer = answersToCompare[i];
+                    const correctAnswer = officialAnswerKey[i];
+                    
+                    options.forEach(option => {
+                        const answerOption = document.createElement('div');
+                        answerOption.classList.add('answer-option');
+                        answerOption.textContent = option;
+                        
+                        if (option === studentAnswer) {
+                            answerOption.classList.add('selected');
+                            
+                            if (option === correctAnswer) {
+                                answerOption.classList.add('correct');
+                                correctCount++;
+                            } else {
+                                answerOption.classList.add('wrong');
+                                wrongCount++;
+                            }
+                        } else if (option === correctAnswer) {
+                            answerOption.classList.add('correct');
+                        }
+                        
+                        answerOptions.appendChild(answerOption);
+                    });
+                    
+                    answerRow.appendChild(questionNumber);
+                    answerRow.appendChild(answerOptions);
+                    comparisonSheet.appendChild(answerRow);
+                }
+                
+                // Atualizar estatísticas
+                comparisonCorrectCount.textContent = correctCount;
+                comparisonWrongCount.textContent = wrongCount;
+                comparisonStats.style.display = 'flex';
+                
+                // Atualizar respostas atuais para correção
+                currentStudentAnswers = answersToCompare;
+            }
+            
+            // Função para calcular resultado da correção
+            function calculateCorrectionResult(studentAnswers, correctAnswers) {
+                let correct = 0;
+                let wrong = 0;
+                const total = Math.min(studentAnswers.length, correctAnswers.length);
+                
+                for (let i = 0; i < total; i++) {
+                    if (studentAnswers[i] === correctAnswers[i]) {
+                        correct++;
+                    } else {
+                        wrong++;
+                    }
+                }
+                
+                const percentage = total > 0 ? Math.round((correct / total) * 100) : 0;
+                
+                return { correct, wrong, total, percentage };
+            }
+            
+            // Função para atualizar resultado da correção
+            function updateCorrectionResult(result) {
+                // Atualizar contadores
+                correctCount.textContent = result.correct;
+                wrongCount.textContent = result.wrong;
+                
+                // Atualizar barra de progresso
+                progressFill.style.width = `${result.percentage}%`;
+                
+                // Gerar visualização das questões
+                generateQuestions(result.total, result.correct, result.wrong);
+                
+                // Mostrar mensagem se não houver gabarito oficial
+                if (officialAnswerKey.length === 0) {
+                    const questionGrid = document.getElementById('questionGrid');
+                    questionGrid.innerHTML = `
+                        <div style="grid-column: 1 / -1; text-align: center; padding: 20px; color: #666;">
+                            <p>Gabarito importado com sucesso!</p>
+                            <p>Para correção automática, adicione um gabarito oficial.</p>
+                        </div>
+                    `;
+                }
+            }
+            
+            // Função para gerar as questões
+            function generateQuestions(total, correct, wrong) {
+                questionGrid.innerHTML = '';
+                
+                for (let i = 1; i <= total; i++) {
+                    const questionItem = document.createElement('div');
+                    questionItem.classList.add('question-item');
+                    questionItem.textContent = i;
+                    
+                    if (i <= correct) {
+                        questionItem.classList.add('question-correct');
+                    } else if (i <= correct + wrong) {
+                        questionItem.classList.add('question-wrong');
+                    } else {
+                        questionItem.classList.add('question-empty');
+                    }
+                    
+                    questionGrid.appendChild(questionItem);
+                }
+            }
+            
+            // Função para gerar respostas aleatórias (simulação de OCR)
+            function generateRandomAnswers(count) {
+                const options = ['A', 'B', 'C', 'D', 'E'];
+                const answers = [];
+                
+                for (let i = 0; i < count; i++) {
+                    const randomIndex = Math.floor(Math.random() * options.length);
+                    answers.push(options[randomIndex]);
+                }
+                
+                return answers;
+            }
+            
+            // Função para obter turma aleatória
+            function getRandomClass() {
+                const grades = ['6º', '7º', '8º', '9º'];
+                const letters = ['A', 'B', 'C'];
+                const randomGrade = grades[Math.floor(Math.random() * grades.length)];
+                const randomLetter = letters[Math.floor(Math.random() * letters.length)];
+                return `${randomGrade} Ano ${randomLetter}`;
+            }
+            
+            // Função para habilitar edição de respostas
+            function enableAnswerEditing() {
+                const answerOptions = document.querySelectorAll('#comparisonSheet .answer-option');
+                
+                answerOptions.forEach(option => {
+                    option.style.cursor = 'pointer';
+                    option.addEventListener('click', function() {
+                        // Encontrar a questão correspondente
+                        const questionRow = this.closest('.answer-row');
+                        const questionNumber = parseInt(questionRow.querySelector('.question-number').textContent) - 1;
+                        
+                        // Atualizar resposta do aluno
+                        currentStudentAnswers[questionNumber] = this.textContent;
+                        
+                        // Recalcular comparação
+                        initializeComparison();
+                    });
+                });
+                
+                alert('Modo de edição ativado. Clique nas alternativas para alterar as respostas do aluno.');
+            }
+            
+            // Função para habilitar edição do gabarito oficial
+            function enableOfficialAnswerEditing() {
+                const answerOptions = document.querySelectorAll('#officialAnswers .answer-option');
+                
+                answerOptions.forEach(option => {
+                    option.style.cursor = 'pointer';
+                    option.addEventListener('click', function() {
+                        // Encontrar a questão correspondente
+                        const questionRow = this.closest('.answer-row');
+                        const questionNumber = parseInt(questionRow.querySelector('.question-number').textContent) - 1;
+                        
+                        // Atualizar gabarito oficial
+                        officialAnswerKey[questionNumber] = this.textContent;
+                        
+                        // Atualizar exibição
+                        displayOfficialAnswers(officialAnswerKey);
+                        
+                        // Re-habilitar edição
+                        enableOfficialAnswerEditing();
+                    });
+                });
+                
+                alert('Modo de edição ativado. Clique nas alternativas para alterar o gabarito oficial.');
+            }
+            
+            // Função para iniciar a câmera
+            function startCamera() {
+                if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                    navigator.mediaDevices.getUserMedia({ 
+                        video: { 
+                            facingMode: 'environment',
+                            width: { ideal: 1280 },
+                            height: { ideal: 720 }
+                        } 
+                    })
+                    .then(function(mediaStream) {
+                        stream = mediaStream;
+                        cameraStream.srcObject = stream;
+                        cameraStream.style.display = 'block';
+                        cameraPreview.style.display = 'none';
+                    })
+                    .catch(function(error) {
+                        console.error('Erro ao acessar a câmera:', error);
+                        // Fallback para simulação
+                        cameraPreview.style.display = 'flex';
+                    });
+                } else {
+                    console.error('getUserMedia não suportado neste navegador');
+                    // Fallback para simulação
+                    cameraPreview.style.display = 'flex';
+                }
+            }
+            
+            // Função para parar a câmera
+            function stopCamera() {
+                if (stream) {
+                    stream.getTracks().forEach(track => track.stop());
+                    cameraStream.style.display = 'none';
+                }
+            }
+            
+            // Função para capturar imagem da câmera
+            function captureImageFromCamera() {
+                if (stream) {
+                    // Criar um canvas para capturar a imagem
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+                    canvas.width = cameraStream.videoWidth;
+                    canvas.height = cameraStream.videoHeight;
+                    
+                    // Desenhar o frame atual do vídeo no canvas
+                    context.drawImage(cameraStream, 0, 0, canvas.width, canvas.height);
+                    
+                    // Converter para blob
+                    canvas.toBlob(function(blob) {
+                        // Processar a imagem capturada
+                        processAnswerSheet(blob, 'scan');
+                        
+                        // Exibir a imagem capturada
+                        const imageUrl = URL.createObjectURL(blob);
+                        scannedImage.src = imageUrl;
+                        scannedImage.style.display = 'block';
+                        cameraStream.style.display = 'none';
+                    }, 'image/jpeg', 0.8);
+                } else {
+                    // Fallback para simulação
+                    cameraPreview.style.display = 'none';
+                    
+                    // Criar uma imagem simulada
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 300;
+                    canvas.height = 400;
+                    const context = canvas.getContext('2d');
+                    
+                    // Desenhar um gabarito simulado
+                    context.fillStyle = 'white';
+                    context.fillRect(0, 0, canvas.width, canvas.height);
+                    
+                    context.fillStyle = 'black';
+                    context.font = '20px Arial';
+                    context.fillText('GABARITO SIMULADO', 50, 50);
+                    
+                    context.font = '16px Arial';
+                    for (let i = 0; i < 20; i++) {
+                        context.fillText(`${i+1}.`, 50, 100 + i*20);
+                        const answers = ['A', 'B', 'C', 'D', 'E'];
+                        const randomAnswer = answers[Math.floor(Math.random() * answers.length)];
+                        context.fillText(randomAnswer, 100, 100 + i*20);
+                    }
+                    
+                    // Converter para blob
+                    canvas.toBlob(function(blob) {
+                        processAnswerSheet(blob, 'scan');
+                        
+                        const imageUrl = URL.createObjectURL(blob);
+                        scannedImage.src = imageUrl;
+                        scannedImage.style.display = 'block';
+                    }, 'image/jpeg', 0.8);
+                }
+            }
+            
+            // Função para resetar a tela de escaneamento
+            function resetScanScreen() {
+                if (stream) {
+                    cameraStream.style.display = 'block';
+                } else {
+                    cameraPreview.style.display = 'flex';
+                }
+                scannedImage.style.display = 'none';
+                scanResult.style.display = 'none';
+                ocrProcessingScan.style.display = 'none';
+                scannedAnswers = [];
+            }
+            
+            // Função para resetar a tela de correção
+            function resetCorrectionScreen() {
+                correctionResult.style.display = 'none';
+                uploadArea.style.display = 'block';
+                ocrProcessing.style.display = 'none';
+                currentStudentAnswers = [];
+            }
+            
+            // Função para resetar a tela de gabarito oficial
+            function resetOfficialScreen() {
+                officialUploadResult.style.display = 'none';
+                officialUploadArea.style.display = 'block';
+                ocrProcessingOfficial.style.display = 'none';
+            }
+            
+            // Função para inicializar os gráficos
+            function initializeCharts() {
+                // Dados de exemplo para os gráficos
+                const subjectData = {
+                    labels: ['Matemática', 'Português', 'Ciências', 'História', 'Geografia'],
+                    datasets: [{
+                        label: 'Desempenho (%)',
+                        data: [55, 82, 75, 90, 60],
+                        backgroundColor: [
+                            'rgba(76, 175, 80, 0.7)',
+                            'rgba(33, 150, 243, 0.7)',
+                            'rgba(156, 39, 176, 0.7)',
+                            'rgba(255, 152, 0, 0.7)',
+                            'rgba(244, 67, 54, 0.7)'
+                        ],
+                        borderColor: [
+                            'rgba(76, 175, 80, 1)',
+                            'rgba(33, 150, 243, 1)',
+                            'rgba(156, 39, 176, 1)',
+                            'rgba(255, 152, 0, 1)',
+                            'rgba(244, 67, 54, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                };
+                
+                const progressData = {
+                    labels: ['Ago', 'Set', 'Out', 'Nov'],
+                    datasets: [{
+                        label: 'Desempenho',
+                        data: [55, 62, 58, 67],
+                        backgroundColor: 'rgba(17, 194, 203, 0.2)',
+                        borderColor: 'rgba(17, 194, 203, 1)',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        fill: true
+                    }]
+                };
+                
+                // Atualizar dados se houver resultados reais
+                if (studentResults.length > 0) {
+                    const lastResult = studentResults[studentResults.length - 1];
+                    progressData.datasets[0].data[3] = lastResult.percentage;
+                    
+                    // Atualizar também o gráfico de distribuição
+                    const correctCount = studentResults.reduce((sum, result) => sum + result.correct, 0);
+                    const wrongCount = studentResults.reduce((sum, result) => sum + result.wrong, 0);
+                    const totalCount = correctCount + wrongCount;
+                    
+                    if (totalCount > 0) {
+                        const distributionData = {
+                            labels: ['Acertos', 'Erros'],
+                            datasets: [{
+                                data: [correctCount, wrongCount],
+                                backgroundColor: [
+                                    'rgba(76, 175, 80, 0.7)',
+                                    'rgba(244, 67, 54, 0.7)'
+                                ],
+                                borderColor: [
+                                    'rgba(76, 175, 80, 1)',
+                                    'rgba(244, 67, 54, 1)'
+                                ],
+                                borderWidth: 1
+                            }]
+                        };
+                        
+                        // Criar gráfico de distribuição
+                        const distributionCtx = document.getElementById('distributionChart').getContext('2d');
+                        new Chart(distributionCtx, {
+                            type: 'doughnut',
+                            data: distributionData,
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: {
+                                        position: 'bottom'
+                                    }
+                                }
+                            }
+                        });
+                    }
+                }
+                
+                // Gráfico de desempenho por matéria
+                const subjectCtx = document.getElementById('subjectChart').getContext('2d');
+                new Chart(subjectCtx, {
+                    type: 'bar',
+                    data: subjectData,
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 100,
+                                ticks: {
+                                    callback: function(value) {
+                                        return value + '%';
+                                    }
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        }
+                    }
+                });
+                
+                // Gráfico de evolução do desempenho
+                const progressCtx = document.getElementById('progressChart').getContext('2d');
+                new Chart(progressCtx, {
+                    type: 'line',
+                    data: progressData,
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 100,
+                                ticks: {
+                                    callback: function(value) {
+                                        return value + '%';
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            
+            // Adicionar efeito de digitação na primeira tela
+            const title = document.querySelector('#screen1 h1');
+            const subtitle = document.querySelector('#screen1 .subtitle');
+            const originalTitle = title.textContent;
+            const originalSubtitle = subtitle.textContent;
+            
+            title.textContent = '';
+            subtitle.textContent = '';
+            
+            let titleIndex = 0;
+            let subtitleIndex = 0;
+            let titleDone = false;
+            
+            function typeWriter() {
+                if (titleIndex < originalTitle.length) {
+                    title.textContent += originalTitle.charAt(titleIndex);
+                    titleIndex++;
+                    setTimeout(typeWriter, 100);
+                } else if (!titleDone) {
+                    titleDone = true;
+                    setTimeout(typeWriter, 500);
+                } else if (subtitleIndex < originalSubtitle.length) {
+                    subtitle.textContent += originalSubtitle.charAt(subtitleIndex);
+                    subtitleIndex++;
+                    setTimeout(typeWriter, 50);
+                }
+            }
+            
+            // Iniciar o efeito de digitação
+            typeWriter();
+            
+            // Adicionar efeito de swipe para navegação
+            let touchStartX = 0;
+            let touchEndX = 0;
+            
+            document.addEventListener('touchstart', e => {
+                touchStartX = e.changedTouches[0].screenX;
+            });
+            
+            document.addEventListener('touchend', e => {
+                touchEndX = e.changedTouches[0].screenX;
+                handleSwipe();
+            });
+            
+            function handleSwipe() {
+                const swipeThreshold = 50;
+                
+                if (touchEndX < touchStartX - swipeThreshold) {
+                    // Swipe para a esquerda (avançar)
+                    if (currentScreen === 1) {
+                        goToScreen(2);
+                    } else if (currentScreen === 2) {
+                        // Validar formulário antes de prosseguir
+                        const email = document.getElementById('email').value;
+                        const password = document.getElementById('password').value;
+                        
+                        if (email && password) {
+                            // Simular cadastro local
+                            userName = email.split('@')[0];
+                            userEmail = email;
+                            isLoggedIn = true;
+                            successMessage.innerHTML = `Cadastro realizado com sucesso!<br>Bem-vindo(a), ${userName}`;
+                            goToScreen(3);
+                        }
+                    } else if (currentScreen === 3) {
+                        goToScreen(4);
+                    }
+                }
+                
+                if (touchEndX > touchStartX + swipeThreshold) {
+                    // Swipe para a direita (voltar)
+                    if (currentScreen === 2) {
+                        goToScreen(1);
+                    } else if (currentScreen === 3) {
+                        goToScreen(2);
+                    } else if (currentScreen === 4) {
+                        goToScreen(3);
+                        nextBtn.style.display = "flex";
+                    } else if (currentScreen === 5) {
+                        goToScreen(4);
+                    } else if (currentScreen === 6) {
+                        goToScreen(4);
+                    } else if (currentScreen === 7) {
+                        goToScreen(6);
+                    } else if (currentScreen === 8) {
+                        if (correctionResult.style.display === 'block') {
+                            goToScreen(5);
+                        } else {
+                            goToScreen(4);
+                        }
+                    } else if (currentScreen === 9) {
+                        goToScreen(4);
+                    } else if (currentScreen === 10) {
+                        goToScreen(4);
+                    }
+                }
+            }
+            
+            // Inicializar Google Sign-In quando a página carregar
+            if (typeof google !== 'undefined') {
+                initializeGoogleSignIn();
+            } else {
+                // Se a biblioteca do Google não carregar, mostrar botão alternativo
+                document.getElementById('googleLoginContainer').innerHTML = `
+                    <button class="btn" onclick="alert('Para login com Google, é necessário configurar um Client ID válido.')">
+                        <i class="fab fa-google" style="margin-right: 10px;"></i> Entrar com Google
+                    </button>
+                `;
+            }
+        });
+    </script>
+</body>
+</html>
